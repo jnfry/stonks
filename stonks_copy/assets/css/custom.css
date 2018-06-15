@@ -1,0 +1,57 @@
+.long-table-item {
+  white-space: nowrap;
+  overflow: hidden; 
+  text-overflow: ellipsis; 
+  min-width: 120px;
+  max-width: 120px;
+}
+
+.short-table-item {
+  white-space: nowrap;
+  overflow: hidden;
+  min-width: 40px;
+  max-width: 30px;
+}
+
+.shorter-table-item {
+  white-space: nowrap;
+  overflow: hidden; 
+  min-width: 30px;
+  max-width: 30px;
+}
+
+.no-wrap {
+  white-space: nowrap; 
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.card-header {
+    padding: .75rem 1.25rem !important;
+  }
+  
+.border-right {
+  border-right: 1px solid #c2cfd6;
+}
+
+.bg-flat-color-1 {
+  background: #4875b4; 
+}
+
+.bg-flat-color-2 {
+  background: #d34836; 
+}
+
+.bg-flat-color-3 {
+  background: #3d9116; 
+}
+
+.bg-flat-color-4 {
+  background: #e64c3c; 
+}
+
+.bg-flat-color-5 {
+  background: #343a40; 
+}
+
+
