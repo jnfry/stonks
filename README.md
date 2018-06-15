@@ -1,2 +1,2 @@
-# stonks
+# Stonks
 A simple cryptocurrency portfolio
