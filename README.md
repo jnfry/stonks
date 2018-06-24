@@ -2,6 +2,7 @@
 A simple cryptocurrency portfolio.
 - JavaScript & JQuery
 - PHP
+- MySQL & PHPMyAdmin
 - Sufee-Admin Bootstrap
     https://github.com/puikinsh/sufee-admin-dashboard
 - Block-io
