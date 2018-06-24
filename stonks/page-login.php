@@ -103,7 +103,7 @@ $_POST = array();
                 $("#email").removeClass("is-invalid");
                 $("#password").removeClass("is-invalid");
 
-                $.ajax({  url: "server/process-login.php",
+                $.ajax({    url: "server/process-login.php",
                             data: $("#loginForm").serialize(),
                             type: "post",
                             datatype: "json",

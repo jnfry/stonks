@@ -10,14 +10,6 @@ if (!isLoggedIn()) {
   header('Location: page-login.php');
 }
 
-
-
-//$_SESSION["wallets"] = getWallets($_SESSION["userId"], $dbConn);
-
-//$_SESSION["walletChecked"] = time();
-//60 is 1 min
-
-
 ?>
 
 <!doctype html>
@@ -72,6 +64,8 @@ if (!isLoggedIn()) {
                     <li class="active">
                         <a href="./"> <i class="menu-icon fa fa-user"></i><?php echo($_SESSION["username"]) ?> </a>
                     </li>
+                    <div id="exchangeRates">
+                    <!--
                     <li>
                         <a><span class=" text-light">BTC<span id="BTC-price" class="text-muted"></span></span></a>
                     </li>
@@ -80,8 +74,8 @@ if (!isLoggedIn()) {
                     </li>
                     <li>
                         <a><span class=" text-light">DOGE<span id="DOGE-price" class="text-muted"></span></span></a>
-                    </li>
-
+                    </li>-->
+                    </div>
                     <h3 class="menu-title">Wallets</h3>
                     <li>
                         <a id="newWalletBtn" href="#" data-toggle="modal" data-target="#newWalletModal"> <i class="menu-icon ti-plus"></i>Add </a>
@@ -123,7 +117,6 @@ if (!isLoggedIn()) {
         <header id="header" class="header">
 
             <div class="header-menu">
-
                 <div class="col-sm-7">
                     <a id="menuToggle" class="menutoggle pull-left"><i class="fa fa fa-tasks"></i></a>
                     <div class="header-left">
@@ -325,36 +318,37 @@ if (!isLoggedIn()) {
 
     <!-- Right Panel -->
 
+    <!-- jquery and bootstrap scripts -->
     <script src="assets/js/jquery-3.3.1.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.3/umd/popper.min.js"></script>
     <script src="assets/js/plugins.js"></script>
     <script src="assets/js/main.js"></script>
 
+    <!-- Stonk specific scripts -->
+    <script type="text/javascript" src="js/view.js"></script>
+    <script type="text/javascript" src="js/controller.js"></script>
+
     <script>
         jQuery(function($) {
-            // store wallets
-            $.wallets = [];
-            // for editing wallets, stores the most recently selected
-            $.selectedWallet;
-            // For different currencies
-            $.exchanges;
-            // Store the currently selected exchange
-            $.selectedExchange = "AUD";
 
+            // The view model for client-side MVC.
+            $.viewModel = {
+                selectedExchange : "AUD",
+                wallets : [],
+                selectedWallet : 0
+            }
 
             $("#logoutBtn").click(function () {
                 window.location = "server/process-logout.php";
             });
 
-            $("#refreshBtn").click(function (e) {
-                e.preventDefault();
+            $("#refreshBtn").click(function () {
                 location.reload();
             });
 
-            $(".exchangeBtn").click(function (e) {
-                $.selectedExchange = $(this).attr("id");
-                getWallets();
-
+            $(".exchangeBtn").click(function () {
+                $.viewModel.selectedExchange = $(this).attr("id");
+                getWallets($.viewModel);
             })
 
             $("#confirmNewWalletBtn").click(function (e) {
@@ -364,280 +358,25 @@ if (!isLoggedIn()) {
                     address : $("#newWalletAddress").val(),
                     currency : $("#newWalletCurrency").val()
                 }
-                addWallet(newWallet);
-                
+                addWallet($.viewModel, newWallet);
             });
 
             $("#confirmDeleteWalletBtn").click(function () {
-                deleteWallet($.selectedWallet);
+                deleteWallet($.viewModel);
             });
 
             $("#confirmUpdateWalletBtn").click(function () {
                 var updatedWallet = {
-                    walletid : $.wallets[$.selectedWallet]["walletid"],
+                    walletid : $.viewModel.wallets[$.viewModel.selectedWallet]["walletid"],
                     name : $("#editWalletName").val(),
                     address : $("#editWalletAddress").val(),
                     currency : $("#editWalletCurrency").val()
                 }
-                updateWallet(updatedWallet, $.selectedWallet);
+                updateWallet($.viewModel, updatedWallet);
             });
-
-            function fadeInLoadbar(colour) {
-                $(".progress-bar").removeClass("bg-default bg-danger bg-success");
-                $(".progress-bar").addClass(colour);
-
-                $(".progress").fadeTo('fast', 0.3, function() {
-                    $(".progress").css("visibility", "visible");
-                }).fadeTo('fast', 1);
-            }
-
-            function fadeOutLoadbar() {
-                $(".progress").fadeTo('fast', 0.3, function() {
-                    $(".progress").css("visibility", "hidden");
-                }).fadeTo('fast', 1);
-            }
-
-            // Update the target form's validation, specified by obj
-            function updateFormValidation(obj, target) {
-                var form = target + "Form";
-
-                if (obj.result == "invalid") {
-                    var field = target + obj.field.charAt(0).toUpperCase() + obj.field.slice(1);
-                    $(form).find(".invalid-feedback." + obj.field).html(obj.msg);
-                    $(field).addClass("is-invalid");
-                }
-            }
-
-            // Open an edit window for wallet at index
-            function openEditWindow(index) {
-                var wallet = $.wallets[index];
-                $.selectedWallet = index;
-
-                $("#editWalletName").removeClass("is-invalid").val(wallet.name);
-                $("#editWalletAddress").removeClass("is-invalid").val(wallet.address);
-                $("#editWalletCurrency").removeClass("is-invalid").val(wallet.currency);
-                $("#editWalletModal").modal("toggle");
-            }
-
-            // Delete a wallet at given index in $.wallets
-            function deleteWallet(index) {
-                fadeInLoadbar("bg-danger");
-                var data = {"delete" : $.wallets[index]["walletid"]};
-                
-                $.ajax({  url: "server/process-delete-wallet.php",
-                        data: data,
-                        type: "post",
-                        datatype: "json",
-                        success: function(result) {
-                            fadeOutLoadbar();
-                            if (result.result == "error") {
-                                window.location = "error.php?error=" + result.msg;
-                                return;
-                            }
-
-                            // Wallet was added, close the window and refresh html
-                            if (result.result == "success") {
-                                $("#editWalletModal").modal("toggle");
-                                getWallets();
-                            }
-                            
-                        }
-                });
-            }
-
-            // Update wallet at index in $.wallet with new info
-            function updateWallet(updatedWallet, index) {
-                fadeInLoadbar("bg-success");
-
-                // Remove form validation indicators
-                $("#editWalletName").removeClass("is-invalid");
-                $("#editWalletAddress").removeClass("is-invalid");
-                $("#editWalletCurrency").removeClass("is-invalid");
-
-                var data = {"update" : updatedWallet};
-                $.ajax({  url: "server/process-update-wallet.php",
-                        data: data,
-                        type: "post",
-                        datatype: "json",
-                        success: function(result) {
-                            fadeOutLoadbar();
-
-                            if (result.result == "error") {
-                                window.location = "error.php?error=" + result.msg;
-                                return;
-                            }
-
-                            updateFormValidation(result, "#editWallet");
-
-                            // Wallet was updated, close the window and refresh html
-                            if (result.result == "success") {
-                                $("#editWalletModal").modal("toggle");
-                                $.wallets[index] = updatedWallet;
-                                getWallets();
-                            }
-                        }
-                });
-
-            }
-
-            // Attempt to add a user defined wallet to the database
-            function addWallet(newWallet) {
-                fadeInLoadbar("bg-default");                
-
-                // Remove form validation indicators
-                $("#newWalletName").removeClass("is-invalid");
-                $("#newWalletAddress").removeClass("is-invalid");
-                $("#newWalletCurrency").removeClass("is-invalid");
-
-                var data = {"add" : newWallet};
-                $.ajax({  url: "server/process-add-wallet.php",
-                        data: data,
-                        type: "post",
-                        datatype: "json",
-                        success: function(result) {
-                            fadeOutLoadbar();
-                            
-                            if (result.result == "error") {
-                                window.location = "error.php?error=" + result.msg;
-                                return;
-                            }
-
-                            updateFormValidation(result, "#newWallet");
-
-                            // Wallet was added, close the window and refresh html
-                            if (result.result == "success") {
-                                $("#newWalletModal").modal("toggle");
-                                getWallets();
-                            }
-                        }
-                });
-            }
-
-            // Request a read of wallets from db.
-            // Follow up by refreshing wallet html
-            function getWallets() {
-                $("#noWalletsMessage").hide();
-                $("#wallets").hide();
-                $("#loadingMessage").fadeIn('fast', function() {
-                    $.ajax({  url: "server/process-get-wallets.php",
-                        type: "post",
-                        datatype: "json",
-                        success: function(result) {                            
-                            $.wallets = [];
-                            $.each(result, function(index, element) {
-                                $.wallets[index] = element;
-                            });
-                            updateWalletHtml();
-                            getCurrencyExchange();
-                        }
-                    });
-                });
-            }
-
-            // Update html for wallets
-            function updateWalletHtml() {
-                $("#wallets").empty();
-
-                var walletCount = 0;
-                $.each($.wallets, function(index, element) {
-                    walletCount++;
-                    var divId = index;
-                    genWalletHtml(divId, element);
-                    
-                });
-
-                $("#loadingMessage").fadeOut('fast', function(x = walletCount) {
-                    if (x == 0) {
-                        $("#noWalletsMessage").hide().removeAttr("hidden").fadeIn();
-                    } else {
-                        $("#wallets").fadeIn();
-                    }
-                });
-            }
-
-            // Generate html for a wallet
-            function genWalletHtml(index, wallet) {
-                var walletHtml =  $([
-                    '<div id="wallet-' + index + '" class="col-sm-12 col-md-6 col-lg-6 col-xl-4">',
-                        '<div class="card text-light">',
-                            '<div class="card-header bg-flat-color-5">',
-                                '<div class="col-10 pl-0">',
-                                    '<h4 class="mb-0 no-wrap">',
-                                    wallet.name,                           
-                                    '</h4>',
-                                '</div>',
-                                '<div>',
-                                    '<a id="editWallet-' + index +'" class="float-right" href="#"> <i class="text-light fa fa-pencil-square-o"></i></a>',
-                                '</div>',
-                            '</div>',
-                            
-                            '<div class="card-body pb-0 text-muted">',
-                                '<table class="table mb-0">',
-                                    '<tbody class="mt-0">',
-                                        '<tr>',
-                                            '<th class="short-table-item" scope="row">' + wallet.currency + '</th>',
-                                            '<td class="long-table-item">' + wallet.balance + '</td>',
-                                            '<td class="shorter-table-item"></td>',
-                                        '</tr>',
-                                        '<tr >',
-                                            '<th class="short-table-item" scope="row">' + $.selectedExchange +'</th>',
-                                            '<td class="dollarValue long-table-item">Pending...</td>',
-                                            '<td class="shorter-table-item"><small>est.</small></td>',
-
-                                        '</tr>',
-                                    '</tbody>',
-                                '</table>',
-                            '</div>',
-                        '</div>',
-                    '</div>'
-                    ].join("\n"));
-                    $("#wallets").append(walletHtml);
-                    $("#editWallet-" + index).click(function (e) {
-                        e.preventDefault();
-                        openEditWindow(index);
-                    })
-            }
-
-            // Update the prices for currencies etc.
-            function getCurrencyExchange() {
-                $.ajax({  url: "server/process-get-exchange.php",
-                    type: "post",
-                    datatype: "json",
-                    success: function(result) {
-                        $.exchanges = new Object();                         
-                        $.each(result, function(index, element) {
-                                $.exchanges[index] = element[$.selectedExchange];
-                        });
-
-                        $.each($.wallets, function(index, wallet) {
-                            var price = $.exchanges[wallet.currency]["PRICE"];
-                            var val = (wallet.balance * price).toFixed(2);
-                            wallet.val = val;
-                            $("#wallet-" + index).find(".dollarValue").hide().html("$" + val).fadeIn('fast');
-                        });
-
-
-                        $.each($.exchanges, function(currency, exchange) {
-                            var newHtml = " "
-                            var change = exchange["CHANGEPCTDAY"];
-
-                            if (change > 0) {
-                                newHtml += "<i class='fa fa-arrow-circle-up text-success'></i> +" + change.toFixed(2) + "% today";
-                            } else if (change < 0) {
-                                newHtml += "<i class='fa fa-arrow-circle-down text-danger'></i> " + change.toFixed(2) + "% today";
-                            } else {
-                                newHtml += "<i class='fa fa-arrow-circle-right text-warning'></i> today";
-                            }
-
-                            newHtml += "</br>$" + exchange["PRICE"] + " " + $.selectedExchange + " ";
-                            $("#" + currency + "-price").hide().html(newHtml).fadeIn('fast');
-                        });
-                    }
-                });
-            }       
-
+            
             $(document).ready(function() {
-                getWallets();
+                getWallets($.viewModel);
             });
         });
     </script>
